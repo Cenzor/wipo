@@ -26,6 +26,7 @@ class WipoThread(threading.Thread):
         self.driver = self.init_driver()
         self.source_tab_list = []
         self.brand_data = []
+        print(f'{self.name} init with {self.domain=}, {self.search_query=}')
 
     def run(self):
         self.main()
@@ -33,6 +34,7 @@ class WipoThread(threading.Thread):
     def main(self):
         self.parse()
         print(f'{self.name}:Length of brand_data: {len(self.brand_data)}')
+        print(self.brand_data[0])
         self.driver.quit()
 
     # Инициализация драйвера
@@ -130,6 +132,7 @@ class WipoThread(threading.Thread):
                 )
 
     # сбор основных данных по поисковому запросу (100х10)
+    # TODO: добавиьт в лог self.query
     def get_brand_data(self, soup):
         """
         index 6 = column Brand, index 7 = column Source,
@@ -144,8 +147,16 @@ class WipoThread(threading.Thread):
         self.brand_data_processing(table, page)
         while page < PAGE_COUNT:
             print(f'{self.name}:Click to the next page button...')
-            btn_next = self.driver.find_element_by_xpath('//*[@id="results"]/div[1]/div[2]/div[3]/a[1]/span[1]')
-            btn_next.click()
+            # Если следующей страницы нет, тогда заканчиваем сбор данных
+            try:
+                btn_next = self \
+                    .driver \
+                    .find_element_by_xpath('//*[@id="results"]/div[1]/div[2]'
+                                           '/div[3]/a[1]/span[1]')
+                btn_next.click()
+            except Exception:
+                print(f'{self.name}:...Next page doesnt exist, break')
+                break
             print(f'{self.name}:...clicked.')
             sleep(randint(4, 5))
             soup = BS(self.driver.page_source, 'lxml')
@@ -154,6 +165,8 @@ class WipoThread(threading.Thread):
             # break  # для первых двух страниц
             page += 1
 
+    # извлечение данных из таблицы
+    # TODO: добавить в лог номер обрабатываемой строки
     def brand_data_processing(self, table, page):
         print(f'{self.name}:Extract data from {page=}')
         for tr in table.find_all('tr')[1:]:

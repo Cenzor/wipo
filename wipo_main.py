@@ -2,17 +2,29 @@ from time import sleep
 from datetime import datetime
 from extract_data import WipoThread
 from handle_db import insert_db
+import sys
+import re
 
 
 # global source_tab_data
 source_tab = []
+queries = []
+
+
+def get_search_queries():
+    with open('list', 'r') as f_in:
+        for line in f_in:
+            domain, query = line.split(None, 1)
+            domain = re.sub('[\t\n]', '', domain)
+            query = re.sub('[\t\n]', '', query)
+            queries.append((domain, query,))
 
 
 if __name__ == '__main__':
+    get_search_queries()
+    queries.reverse()
     st_time = datetime.now()
-    # queries = ['game', 'tea', 'cat', 'dog']
-    queries = [('game.com', 'game'), ('tea.com', 'tea'), ('cat.com', 'cat')]
-    N = 4
+    N = 3
     thread_list = list()
     while queries:
         for i in range(N):
