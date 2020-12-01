@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup as BS
 import unicodedata
+from handle_db import insert_db
 
 
 # Количество страниц для сбора
@@ -23,18 +24,16 @@ class WipoThread(threading.Thread):
         self.name = name
         self.domain = domain
         self.search_query = search_query
+        print(f'{self.name}:Start with domain={self.domain}, search_query={self.search_query}')
         self.driver = self.init_driver()
-        self.source_tab_list = []
+        self.statistic = dict()
         self.brand_data = []
-        print(f'{self.name} init with {self.domain=}, {self.search_query=}')
 
     def run(self):
         self.main()
 
     def main(self):
         self.parse()
-        print(f'{self.name}:Length of brand_data: {len(self.brand_data)}')
-        print(self.brand_data[0])
         self.driver.quit()
 
     # Инициализация драйвера
@@ -49,13 +48,12 @@ class WipoThread(threading.Thread):
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
-        driver = webdriver.Chrome('/usr/bin/chromedriver',
+        driver = webdriver.Chrome('./chromedriver',
                                   options=chrome_options)
         # driver = webdriver.Chrome('/usr/bin/chromedriver')
         print(f'{self.name}:Complete')
         return driver
 
-    # Получение данных со вкладки Source
     def parse(self):
         while True:
             # Открыть начальную страницу
@@ -92,10 +90,13 @@ class WipoThread(threading.Thread):
             print(f'{self.name}:...Complete')
             # преобразуем page_source в экземпляр BS
             soup = BS(self.driver.page_source, 'lxml')
-            self.get_source_data(soup)
+            self.get_statistic(soup)
+            insert_db(self.statistic, 'stat')
             self.get_brand_data(soup)
+            insert_db(self.brand_data, 'brand')
+
         except Exception as ex:
-            print(ex)
+            print('In parse: ', ex)
             self.driver.quit()
             sys.exit(0)
 
@@ -112,36 +113,30 @@ class WipoThread(threading.Thread):
             return True
         except Exception as ex:
             print(f'{self.name}:'
-                  f'...Element not found: {ex=}')
+                  f'...Element not found: ex={ex}')
             return False
             self.driver.quit()
             sys.exit(0)
 
     # сбор данных с вкладки Source
-    def get_source_data(self, soup):
+    def get_statistic(self, soup):
         # Сохранение значений вкладки Source в список
         for list_a in soup.select('#source_filter > div.facetContainer '
                                   '> div > div.facetCounts.columns_3 > div'):
+            self.statistic['search_query'] = self.search_query
+            total_raw = soup.select('#results > div.results_navigation.'
+                                    'top_results_navigation.displayButtons > '
+                                    'div.results_pager.ui-widget-content > '
+                                    'div.pagerPos')
+            total = total_raw[0].string.split('/')[1].strip().replace(',','')
+            self.statistic['total'] = int(total)
             for a in list_a:
-                self.source_tab_list.append(
-                    [
-                        self.search_query,
-                        a.div.label.string,
-                        a.div.findNext('div').contents[0]
-                    ]
-                )
+                value = int(a.div.findNext('div').contents[0].replace(',', ''))
+                self.statistic[a.div.label.string] = value
 
     # сбор основных данных по поисковому запросу (100х10)
     # TODO: добавиьт в лог self.query
     def get_brand_data(self, soup):
-        """
-        index 6 = column Brand, index 7 = column Source,
-        index 8 = column Status, index 9 = column Relevance,
-        index 10 = column Origin, index 11 = column Holder,
-        index 12 = column Holder Country, index 13 = column Number,
-        index 15 = column App. Date, index 17 = column Image Class,
-        index 18 = column Nice Cl.
-        """
         page = 1
         table = soup.find_all('table')[4]
         self.brand_data_processing(table, page)
@@ -168,7 +163,10 @@ class WipoThread(threading.Thread):
     # извлечение данных из таблицы
     # TODO: добавить в лог номер обрабатываемой строки
     def brand_data_processing(self, table, page):
-        print(f'{self.name}:Extract data from {page=}')
+        # Brand 6, Source 7, Status 8, Relevance 9, Origin 10, Holder 11,
+        # Holder Country 12, Number 13, App. Date 15, Image Class 17,
+        # Nice Cl. 18, Image 19
+        print(f'{self.name}:Extract data from page={page}')
         for tr in table.find_all('tr')[1:]:
             tds = tr.find_all('td')
             temp_list = [
@@ -176,7 +174,7 @@ class WipoThread(threading.Thread):
                 tds[7]['title'], tds[8]['title'], tds[9]['title'],
                 tds[10]['title'], tds[11]['title'], tds[12]['title'],
                 tds[13]['title'], tds[15]['title'], tds[17]['title'],
-                tds[18]['title']
+                tds[18]['title'], tds[19]['title']
             ]
             row_tuple = tuple(
                 map(lambda x: unicodedata.normalize('NFKD', x).strip(),
