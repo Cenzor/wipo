@@ -22,7 +22,6 @@ sql_query = {
 }
 
 
-# TODO: отрефакторить
 def insert_db(data, data_type):
     with closing(pymysql.connect(
         host='localhost',

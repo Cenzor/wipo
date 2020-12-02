@@ -11,21 +11,22 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup as BS
 import unicodedata
 from handle_db import insert_db
-
-
-# Количество страниц для сбора
-PAGE_COUNT = 10
+from tools import is_proxy_alive
 
 
 class WipoThread(threading.Thread):
 
-    def __init__(self, name, domain, search_query):
+    def __init__(self, name, domain, search_query, proxy_list, page_count):
         threading.Thread.__init__(self)
         self.name = name
         self.domain = domain
         self.search_query = search_query
-        print(f'{self.name}:Start with domain={self.domain}, search_query={self.search_query}')
-        self.driver = self.init_driver()
+        self.page_count = page_count
+        self.proxy_list = proxy_list
+        self.init_driver()
+        print(f'{self.name}:Start with domain={self.domain},'
+              f' search_query={self.search_query},'
+              f' proxy={self.proxy}')
         self.statistic = dict()
         self.brand_data = []
 
@@ -36,9 +37,20 @@ class WipoThread(threading.Thread):
         self.parse()
         self.driver.quit()
 
+    # TODO: chromedriver засунуть в bin
     # Инициализация драйвера
     def init_driver(self):
         print(f'{self.name}:Init webdriver')
+        while True:
+            temp_proxy = self.proxy_list.get()
+            print(f'{self.name}:Try proxy {temp_proxy}...')
+            print(f'Length of proxies_list: {self.proxy_list.qsize()}')
+            if is_proxy_alive(temp_proxy):
+                self.proxy = temp_proxy
+                self.proxy_list.put(temp_proxy)
+                print(f'Length of proxies_list: {self.proxy_list.qsize()}')
+                print(f'{self.name}:...{self.proxy} alive')
+                break
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64)"
@@ -48,20 +60,26 @@ class WipoThread(threading.Thread):
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
-        driver = webdriver.Chrome('./chromedriver',
-                                  options=chrome_options)
+        chrome_options.add_argument(f'--proxy-server={self.proxy}')
+        self.driver = webdriver.Chrome('./chromedriver',
+                                       options=chrome_options)
         # driver = webdriver.Chrome('/usr/bin/chromedriver')
         print(f'{self.name}:Complete')
-        return driver
 
     def parse(self):
+        attempt = 1
         while True:
             # Открыть начальную страницу
-            print(f'{self.name}:Open start page...')
+            print(f'{self.name}:Open start page, attempt {attempt}...')
             self.driver.get('https://www3.wipo.int/branddb/en/')
             locate_element = '//*[@id="results"]/div[1]/div[2]/a/span[1]/img'
             if self.wait_element_present(locate_element):
                 break
+            if attempt == 3:
+                self.init_driver()
+                attempt = 0
+            attempt += 1
+
         try:
             # Выполнить поиск по запросу
             print(f'{self.name}:Search by query...')
@@ -98,7 +116,6 @@ class WipoThread(threading.Thread):
         except Exception as ex:
             print('In parse: ', ex)
             self.driver.quit()
-            sys.exit(0)
 
     # Ожидание загрузки страницы до появления искомого элемента
     def wait_element_present(self, element):
@@ -115,8 +132,7 @@ class WipoThread(threading.Thread):
             print(f'{self.name}:'
                   f'...Element not found: ex={ex}')
             return False
-            self.driver.quit()
-            sys.exit(0)
+            # self.driver.quit()
 
     # сбор данных с вкладки Source
     def get_statistic(self, soup):
@@ -140,7 +156,7 @@ class WipoThread(threading.Thread):
         page = 1
         table = soup.find_all('table')[4]
         self.brand_data_processing(table, page)
-        while page < PAGE_COUNT:
+        while page < self.page_count:
             print(f'{self.name}:Click to the next page button...')
             # Если следующей страницы нет, тогда заканчиваем сбор данных
             try:
