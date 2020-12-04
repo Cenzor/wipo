@@ -1,0 +1,47 @@
+2020-12-04 06:00:23,078 - [INFO] - __main__ (wipo_main.py).<module>(12): The parser is running. Start time: 2020-12-04 06:00:23.078868
+2020-12-04 06:00:23,080 - [DEBUG] - __main__ (wipo_main.py).<module>(14): Get args from cli
+2020-12-04 06:00:23,083 - [DEBUG] - lib.tools (tools.py).get_args(61): Initial params: queries_file=list, threads=1, proxies_file=proxies, page_count=1
+2020-12-04 06:00:23,083 - [DEBUG] - __main__ (wipo_main.py).<module>(16): Fill proxy list
+2020-12-04 06:00:23,097 - [DEBUG] - lib.tools (tools.py).fill_proxy_list(35): Length of proxy_list: 1000
+2020-12-04 06:00:23,097 - [DEBUG] - __main__ (wipo_main.py).<module>(18): Get search_queries
+2020-12-04 06:00:23,098 - [DEBUG] - lib.tools (tools.py).get_search_queries(76): Length of queries: 1
+2020-12-04 06:00:23,098 - [INFO] - __main__ (wipo_main.py).<module>(21): Threads 1
+2020-12-04 06:00:23,098 - [INFO] - __main__ (wipo_main.py).<module>(22): Number of pages for each seqrch_query 1
+2020-12-04 06:00:23,098 - [INFO] - __main__ (wipo_main.py).<module>(23): Initial length of queries: 1
+
+2020-12-04 06:00:23,099 - [INFO] - __main__ (wipo_main.py).<module>(24): Initial length of proxy_list: 1000
+
+2020-12-04 06:00:23,099 - [DEBUG] - lib.extract_data (extract_data.py).init_driver(49): wipothread 0:Init webdriver
+2020-12-04 06:00:23,102 - [DEBUG] - lib.extract_data (extract_data.py).init_driver(52): wipothread 0:Try proxy 45.10.167.95:8085...
+2020-12-04 06:00:27,381 - [DEBUG] - lib.tools (tools.py).is_proxy_available(22): wipothread 0:Proxy 45.10.167.95:8085 BANNED. Status code: 403
+2020-12-04 06:00:27,382 - [DEBUG] - lib.extract_data (extract_data.py).init_driver(52): wipothread 0:Try proxy 213.232.121.27:8085...
+2020-12-04 06:00:28,336 - [INFO] - lib.tools (tools.py).is_proxy_available(18): wipothread 0:Proxy 213.232.121.27:8085 available. Status code: 200
+2020-12-04 06:00:30,050 - [INFO] - lib.extract_data (extract_data.py).__init__(33): wipothread 0:Started with domain=game.com, search_query=game, proxy=213.232.121.27:8085
+2020-12-04 06:00:30,054 - [DEBUG] - lib.extract_data (extract_data.py).parse(74): wipothread 0:Open start page, attempt 1...
+2020-12-04 06:00:40,125 - [DEBUG] - lib.extract_data (extract_data.py).wait_element_present(130): wipothread 0:...Wait for the element to apear...
+2020-12-04 06:00:41,530 - [DEBUG] - lib.extract_data (extract_data.py).wait_element_present(135): wipothread 0:...Element found...
+2020-12-04 06:00:41,531 - [DEBUG] - lib.extract_data (extract_data.py).parse(87): wipothread 0:Search by query...
+2020-12-04 06:00:46,110 - [DEBUG] - lib.extract_data (extract_data.py).parse(94): wipothread 0:...Complete
+2020-12-04 06:00:46,111 - [DEBUG] - lib.extract_data (extract_data.py).parse(96): wipothread 0:Set 100 result per page...
+2020-12-04 06:00:46,587 - [DEBUG] - lib.extract_data (extract_data.py).parse(102): wipothread 0:...Listbox clicked...
+2020-12-04 06:00:49,097 - [DEBUG] - lib.extract_data (extract_data.py).parse(108): wipothread 0:...Row "100" clicked...
+2020-12-04 06:00:55,104 - [DEBUG] - lib.extract_data (extract_data.py).parse(110): wipothread 0:...Complete
+2020-12-04 06:00:55,670 - [DEBUG] - lib.extract_data (extract_data.py).parse(113): wipothread 0Get statistics data
+2020-12-04 06:00:55,803 - [DEBUG] - lib.extract_data (extract_data.py).get_statistic(148): wipothread 0:Statistic table found
+2020-12-04 06:00:55,923 - [DEBUG] - lib.extract_data (extract_data.py).get_statistic(159): wipothread 0:Statistics collected
+2020-12-04 06:00:55,923 - [DEBUG] - lib.extract_data (extract_data.py).parse(115): wipothread 0Insert statistic data to db
+2020-12-04 06:00:55,929 - [DEBUG] - lib.handle_db (handle_db.py).insert_db(54): wipothread 0:Statistic data execute success
+2020-12-04 06:00:55,943 - [DEBUG] - lib.handle_db (handle_db.py).insert_db(63): wipothread 0:Statistic data commit success
+2020-12-04 06:00:55,943 - [DEBUG] - lib.extract_data (extract_data.py).parse(117): wipothread 0Get brand data
+2020-12-04 06:00:55,943 - [DEBUG] - lib.extract_data (extract_data.py).get_brand_data(164): wipothread 0:Get table with brand data (search_query=game)
+2020-12-04 06:00:55,954 - [DEBUG] - lib.extract_data (extract_data.py).get_brand_data(167): wipothread 0:Table with brand data found
+2020-12-04 06:00:55,955 - [DEBUG] - lib.extract_data (extract_data.py).brand_data_processing(197): wipothread 0:Extract data from page=1
+2020-12-04 06:00:55,975 - [DEBUG] - lib.extract_data (extract_data.py).brand_data_processing(218): wipothread 0:Data from page=1 extracted
+2020-12-04 06:00:55,975 - [DEBUG] - lib.extract_data (extract_data.py).parse(119): wipothread 0Insert brand data to db
+2020-12-04 06:00:55,990 - [DEBUG] - lib.handle_db (handle_db.py).insert_db(40): wipothread 0:Brand data executemany success
+2020-12-04 06:00:56,002 - [DEBUG] - lib.handle_db (handle_db.py).insert_db(49): wipothread 0:Brand data commit success
+2020-12-04 06:00:56,002 - [INFO] - lib.extract_data (extract_data.py).main(44): wipothread 0:Finished work
+2020-12-04 06:00:56,098 - [INFO] - __main__ (wipo_main.py).<module>(43): Length of queries: 0
+2020-12-04 06:00:56,098 - [INFO] - __main__ (wipo_main.py).<module>(44): Length of proxy_list: 999
+2020-12-04 06:00:56,098 - [INFO] - __main__ (wipo_main.py).<module>(45): Loop elapsed time (1 threads, 1 page_count): 0:00:33.017965
+2020-12-04 06:00:56,099 - [INFO] - __main__ (wipo_main.py).<module>(47): Total elapsed time: 0:00:33.018178
