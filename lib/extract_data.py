@@ -1,4 +1,6 @@
+import sys
 import threading
+import unicodedata
 from time import sleep
 from random import randint
 from selenium import webdriver
@@ -8,20 +10,29 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup as BS
-import unicodedata
 from .handle_db import insert_db
 from .tools import is_proxy_available
 from .logger_conf import configure_logger
-import traceback
-import sys
 
 
 logger = configure_logger(__name__)
 
 
 class WipoThread(threading.Thread):
+    """
+
+    Экземпляр потока.
+    Каждый поток инициализирует webdriver, выпоняет поиск на сайте.
+    Поиск выполняется по ключевому слову из предоставляемого файла.
+    Собирается найденная статисктика ключевого слова и основная
+    инфрмация из таблицы с результатами. Собранная информация заносится в БД.
+
+    """
 
     def __init__(self, name, domain, search_query, proxy_list, page_count):
+        """
+        Инициализация переменных, selenium webdriver'а
+        """
         threading.Thread.__init__(self)
         self.name = name
         self.logger = logger
@@ -37,14 +48,30 @@ class WipoThread(threading.Thread):
         self.brand_data = []
 
     def run(self):
+        """
+        Запуск потока
+        """
         self.main()
 
     def main(self):
+        """
+        Точка входа для потока
+        """
         self.parse()
         self.logger.info(f'{self.name}:Finished work')
         self.driver.quit()
 
     def init_driver(self):
+        """
+        Инициализация selenium webdriver.
+        При инициализации выбирается рабочий прокси-сервер.
+        Принцип проксирования:
+            С начала очереди берётся прокси, проверяется, если прокси
+            нерабочий, то берётся следующий прокси из начала очереди.
+            Если прокси рабочий, тогда он устанавливается в Chrome и
+            добавляется в конец очереди прокси-серверов
+            Работа каждого потока обеспечивается однм прокси
+        """
         self.logger.debug(f'{self.name}:Init webdriver')
         # Выбор и проверка прокси из очереди. 
         while True:
@@ -56,8 +83,9 @@ class WipoThread(threading.Thread):
                 break
         chrome_options = Options()
         chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64)"
-                                    " AppleWebKit/537.36 (KHTML, like Gecko)"
+        chrome_options.add_argument("--user-agent=Mozilla/5.0 (X11; "
+                                    "Linux x86_64) AppleWebKit/537.36 "
+                                    "(KHTML, like Gecko)"
                                     " Chrome/87.0.4280.66 Safari/537.36")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--disable-gpu")
@@ -68,6 +96,9 @@ class WipoThread(threading.Thread):
                                        options=chrome_options)
 
     def parse(self):
+        """
+        Сбор статистики и основной информации по ключевому слову
+        """
         attempt = 1
         # Открытие начальной страницы и обнаружение элемента,
         # для подтверждения полной загрузки страницы.
@@ -98,7 +129,6 @@ class WipoThread(threading.Thread):
             self.logger.debug(f'{self.name}:...Complete')
             # Отображать по 100 результатов на странице
             self.logger.debug(f'{self.name}:Set 100 result per page...')
-            # TODO: тестирование неправиьлного элемента ABC
             # Раскрывающийся список в заголовке таблицы с выдачей результатов
             self.driver.find_element_by_xpath(
                 '//*[@id="results"]/div[1]/div[2]/div[2]/span/div[2]'
@@ -116,22 +146,24 @@ class WipoThread(threading.Thread):
             # преобразуем исходный код страницы, полученный от webdriver,
             # в объект BeautifulSoup для разбора
             soup = BS(self.driver.page_source, 'lxml')
-            self.logger.debug(f'{self.name}Get statistics data')
+            self.logger.debug(f'{self.name}:Get statistics data')
             self.get_statistic(soup)
-            self.logger.debug(f'{self.name}Insert statistic data to db')
-            insert_db(self.statistic, 'stat', self.name)
-            self.logger.debug(f'{self.name}Get brand data')
+            self.logger.debug(f'{self.name}:Get brand data')
             self.get_brand_data(soup)
-            self.logger.debug(f'{self.name}Insert brand data to db')
+            self.logger.debug(f'{self.name}:Insert statistic data to db')
+            insert_db(self.statistic, 'stat', self.name)
+            self.logger.debug(f'{self.name}:Insert brand data to db')
             insert_db(self.brand_data, 'brand', self.name)
         except Exception as ex:
-            self.logger.debug(f'{self.name}:Error occurred - {ex}')
-            self.logger.debug(f'{self.name}:'
-                              f'{traceback.print_exception(*sys.exc_info())}')
-            self.driver.quit()
+            self.logger.error(f'{self.name}:Error occurred - {ex}. '
+                              'Terminated thread')
+            sys.exit(0)
 
-    # Ожидание загрузки страницы до появления искомого элемента
     def wait_element_present(self, element):
+        """
+        Ожидает появления указанного элемента на странице, для того,
+        чтобы удостовериьтся в полной загрузке страницы
+        """
         try:
             self.logger.debug(f'{self.name}:...Wait for'
                               ' the element to apear...')
@@ -143,12 +175,14 @@ class WipoThread(threading.Thread):
                               '...Element found...')
             return True
         except Exception as ex:
-            self.logger.debug(f'{self.name}:'
+            self.logger.error(f'{self.name}:'
                               f'...Element not found: {ex}')
             return False
 
-    # сбор данных с вкладки Source
     def get_statistic(self, soup):
+        """
+        Собирает статистику с вкладки Source
+        """
         # Сохранение значений вкладки Source в список
         for list_a in soup.select('#source_filter > div.facetContainer '
                                   '> div > div.facetCounts.columns_3 > div'):
@@ -159,7 +193,7 @@ class WipoThread(threading.Thread):
                                     'top_results_navigation.displayButtons > '
                                     'div.results_pager.ui-widget-content > '
                                     'div.pagerPos')
-            total = total_raw[0].string.split('/')[1].strip().replace(',','')
+            total = total_raw[0].string.split('/')[1].strip().replace(',', '')
             self.statistic['total'] = int(total)
             # Добавление значений TM в словарь
             for a in list_a:
@@ -167,8 +201,10 @@ class WipoThread(threading.Thread):
                 self.statistic[a.div.label.string] = value
             self.logger.debug(f'{self.name}:Statistics collected')
 
-    # сбор основных данных по поисковому запросу (100х10)
     def get_brand_data(self, soup):
+        """
+        Cбор основных данных по поисковому запросу
+        """
         page = 1
         self.logger.debug(f'{self.name}:Get table with brand data '
                           f'(search_query={self.search_query})')
@@ -198,9 +234,10 @@ class WipoThread(threading.Thread):
             table = soup.find_all('table')[4]
             self.brand_data_processing(table, page)
 
-    # TODO: протестировать номер строки в логе при ошибке
-    # извлечение данных из таблицы
     def brand_data_processing(self, table, page):
+        """
+        Извлечение данных из таблицы
+        """
         # Brand 6, Source 7, Status 8, Relevance 9, Origin 10, Holder 11,
         # Holder Country 12, Number 13, App. Date 15, Image Class 17,
         # Nice Cl. 18, Image 19
@@ -222,13 +259,10 @@ class WipoThread(threading.Thread):
                         temp_list))
                 self.brand_data.append(row_tuple)
             except Exception as ex:
-                self.logger.debug(f'{self.name}:Error occurred - {ex}')
-                self.logger.debug(f'{self.name}:Page {page}, row {row}')
-                trace = traceback.print_exception(*sys.exc_info())
-                self.logger.debug(f'{self.name}:{trace}')
-                self.driver.quit()
+                self.logger.error(f'{self.name}:Error occurred - {ex}. '
+                                  f'On page {page}, row {row}, '
+                                  f'search_query "{self.search_query}".'
+                                  'Terminated thread')
+                sys.exit(0)
         self.logger.debug(f'{self.name}:Data from page={page} '
                           'extracted')
-
-    def __str__(self):
-        return self.name

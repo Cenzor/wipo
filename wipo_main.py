@@ -1,8 +1,8 @@
 from time import sleep
 from datetime import datetime
 from lib.extract_data import WipoThread
-from lib.tools import fill_proxy_list, get_args, get_search_queries
 from lib.logger_conf import configure_logger
+from lib.tools import fill_proxy_list, get_args, get_search_queries
 
 
 logger = configure_logger(__name__)
@@ -41,8 +41,8 @@ if __name__ == '__main__':
             thread.join()
         # Очистка списка потоков
         thread_list.clear()
-        logger.info(f'Length of queries: {len(queries)}')
-        logger.info(f'Length of proxy_list: {proxy_list.qsize()}')
         logger.info(f'Loop elapsed time ({threads} threads, '
                     f'{page_count} page_count): {datetime.now() - st_time}')
+        logger.info(f'Remains length of queries: {len(queries)}')
+        logger.info(f'Remains length of proxy_list: {proxy_list.qsize()}')
     logger.info(f'Total elapsed time: {datetime.now() - st_time}')

@@ -1,21 +1,23 @@
 import argparse
 import re
 from multiprocessing import Queue
-from .logger_conf import configure_logger
 import requests
-import threading
+from .logger_conf import configure_logger
 
 
 logger = configure_logger(__name__)
 
 
 def is_proxy_available(proxy, thread_name):
+    """
+    Проверка работоспособности прокси-сервера
+    """
     proxies = {'https': proxy}
     try:
         response = requests.get('https://www3.wipo.int/branddb/en/',
                                 proxies=proxies, timeout=5)
         if response.status_code == 200:
-            logger.info(f'{thread_name}:Proxy {proxy} available. '
+            logger.debug(f'{thread_name}:Proxy {proxy} available. '
                         f'Status code: {response.status_code}')
             return True
         else:
@@ -28,6 +30,9 @@ def is_proxy_available(proxy, thread_name):
 
 
 def fill_proxy_list(proxies_file):
+    """
+    Заполнение очереди прокси-серверами из предоставленного пользователем файла
+    """
     proxy_list = Queue()
     with open(proxies_file, 'r') as f_in:
         for line in f_in:
@@ -37,6 +42,9 @@ def fill_proxy_list(proxies_file):
 
 
 def get_args():
+    """
+    Получение и обработка аргументов командной строки при запуске парсера
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--file", dest="queries_file", action="store",
                         type=str, help="File name with queries. Default file"
@@ -65,6 +73,10 @@ def get_args():
 
 
 def get_search_queries(queries_file):
+    """
+    Заполнение списка значениями tuple("домен", "ключевое слово")
+    из предоставленного пользователем файла
+    """
     queries = []
     with open(queries_file, 'r') as f_in:
         for line in f_in:

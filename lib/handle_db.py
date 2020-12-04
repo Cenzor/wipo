@@ -1,6 +1,6 @@
-from contextlib import closing
 import pymysql
 from pymysql.cursors import DictCursor
+from contextlib import closing
 from .logger_conf import configure_logger
 
 
@@ -26,6 +26,9 @@ sql_query = {
 
 
 def insert_db(data, data_type, thread_name):
+    """
+    Запись данных в БД
+    """
     with closing(pymysql.connect(
         host='localhost',
         user='wipo2',
